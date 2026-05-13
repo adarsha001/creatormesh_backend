@@ -40,23 +40,59 @@ router.get('/username/:username', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
+    // Check if mongoose is connected
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'Database not connected. Please try again in a moment.' 
+      });
+    }
+
     // Generate creatorId like creator001, creator002, etc.
-    const count = await Creator.countDocuments();
+    const count = await Creator.countDocuments().maxTimeMS(5000); // 5 second timeout
     const creatorNumber = String(count + 1).padStart(3, '0');
     const creatorId = `creator${creatorNumber}`;
+    
+    console.log(`Creating new creator with ID: ${creatorId}`);
     
     const creatorData = {
       ...req.body,
       creatorId: creatorId,
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      createdAt: new Date()
     };
     
     const creator = new Creator(creatorData);
     const savedCreator = await creator.save();
-    res.status(201).json({ success: true, data: savedCreator });
+    
+    res.status(201).json({ 
+      success: true, 
+      data: savedCreator,
+      message: 'Creator created successfully'
+    });
   } catch (error) {
-    console.error('Error:', error);
-    res.status(400).json({ success: false, message: error.message });
+    console.error('Error in POST /api/creators:', error);
+    
+    // Handle specific MongoDB errors
+    if (error.name === 'MongooseError' && error.message.includes('buffering timed out')) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'Database connection is still initializing. Please wait a moment and try again.' 
+      });
+    }
+    
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Validation failed', 
+        errors: Object.values(error.errors).map(e => e.message)
+      });
+    }
+    
+    res.status(400).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 });
 
