@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 const creatorSchema = new mongoose.Schema({
   creatorId: {
     type: String,
-    unique: true
+    unique: true,
+    sparse: true
   },
   name: {
     type: String,
@@ -23,13 +24,13 @@ const creatorSchema = new mongoose.Schema({
   languages: [String],
   location: String,
   category: String,
-  followers: String,
+  followers: Number,
   lvr: String,
   engagement: String,
   viewRatio: String,
-  avgViews: String,
-  avgLikes: String,
-  avgComments: String,
+  avgViews: Number,
+  avgLikes: Number,
+  avgComments: Number,
   communityInfluenceScore: String,
   communityInsight: String,
   socialLinks: {
@@ -39,28 +40,22 @@ const creatorSchema = new mongoose.Schema({
     linkedin: String,
     facebook: String
   },
-  originalPrice: String,
-  companyPrice: String,
+  originalPrice: Number,
+  companyPrice: Number,
   email: String,
-  phone: Number,
+  phone: String,
   response: String,
   strategicVerdict: String,
   status: {
     type: String,
     enum: ['available', 'busy', 'on_break'],
     default: 'available'
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
   }
+}, {
+  timestamps: true // This automatically handles createdAt and updatedAt
 });
 
-// NO PRE-SAVE MIDDLEWARE - Remove it completely
+// NO pre-save middleware needed - timestamps handles everything
 
 const Creator = mongoose.model('Creator', creatorSchema);
 
