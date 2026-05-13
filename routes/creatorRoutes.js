@@ -42,9 +42,11 @@ router.get('/username/:username', async (req, res) => {
 // POST create new creator
 router.post('/', async (req, res) => {
   try {
+    console.log('=== FULL REQUEST BODY ===');
+    console.log(JSON.stringify(req.body, null, 2));
+    
     // Generate 5-character unique ID
     const generateCreatorId = () => {
-      // Generate a random 5-character string (letters and numbers)
       const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
       let result = '';
       for (let i = 0; i < 5; i++) {
@@ -56,29 +58,35 @@ router.post('/', async (req, res) => {
     const creatorId = generateCreatorId();
     console.log(`Creating new creator with ID: ${creatorId}`);
     
-    // Process incoming data - REMOVED createdAt and updatedAt
+    // Process incoming data
     let creatorData = {
       ...req.body,
       creatorId: creatorId
-      // Don't include createdAt/updatedAt - timestamps will handle them
     };
+    
+    console.log('=== PROCESSED DATA BEFORE CONVERSION ===');
+    console.log(JSON.stringify(creatorData, null, 2));
     
     // Convert string fields to appropriate types
     const numericFields = ['followers', 'avgViews', 'avgLikes', 'avgComments', 'originalPrice', 'companyPrice'];
     numericFields.forEach(field => {
       if (creatorData[field] !== undefined && creatorData[field] !== '') {
+        const originalValue = creatorData[field];
         creatorData[field] = parseInt(creatorData[field]) || 0;
+        console.log(`Converted ${field}: "${originalValue}" -> ${creatorData[field]}`);
       }
     });
     
     // Convert phone to string if needed
     if (creatorData.phone !== undefined && creatorData.phone !== '') {
       creatorData.phone = String(creatorData.phone);
+      console.log(`Phone converted to: ${creatorData.phone}`);
     }
     
     // Convert languages from comma-separated string to array
     if (creatorData.languages && typeof creatorData.languages === 'string') {
       creatorData.languages = creatorData.languages.split(',').map(l => l.trim()).filter(l => l);
+      console.log(`Languages converted to array:`, creatorData.languages);
     }
     
     // Ensure socialLinks is properly structured
@@ -90,9 +98,27 @@ router.post('/', async (req, res) => {
         linkedin: '',
         facebook: ''
       };
+      console.log('Created default socialLinks');
     }
     
-    // Ensure required fields are present
+    console.log('=== FINAL DATA BEFORE SAVE ===');
+    console.log(JSON.stringify(creatorData, null, 2));
+    
+    // Check required fields
+    if (!creatorData.name) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name is required'
+      });
+    }
+    
+    if (!creatorData.username) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username is required'
+      });
+    }
+    
     if (!creatorData.socialLinks.instagram) {
       return res.status(400).json({
         success: false,
@@ -109,38 +135,28 @@ router.post('/', async (req, res) => {
       message: 'Creator created successfully'
     });
   } catch (error) {
-    console.error('Error in POST /api/creators:', error);
+    console.error('=== ERROR DETAILS ===');
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error code:', error.code);
     
-    // Handle duplicate key error (if duplicate creatorId, generate new one)
-    if (error.code === 11000) {
-      // Retry with new ID
-      const newCreatorId = generateCreatorId();
-      console.log(`Duplicate ID, retrying with new ID: ${newCreatorId}`);
-      creatorData.creatorId = newCreatorId;
-      
-      try {
-        const creator = new Creator(creatorData);
-        const savedCreator = await creator.save();
-        return res.status(201).json({ 
-          success: true, 
-          data: savedCreator,
-          message: 'Creator created successfully'
-        });
-      } catch (retryError) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Duplicate entry. Username already exists.'
-        });
-      }
-    }
-    
-    // Handle validation errors
     if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map(err => err.message);
+      console.error('Validation errors:', error.errors);
+      const errors = Object.values(error.errors).map(err => ({
+        field: err.path,
+        message: err.message
+      }));
       return res.status(400).json({
         success: false,
         message: 'Validation failed',
         errors: errors
+      });
+    }
+    
+    if (error.code === 11000) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Username already exists'
       });
     }
     
@@ -149,7 +165,7 @@ router.post('/', async (req, res) => {
       message: error.message 
     });
   }
-}); 
+});
 // PUT update creator
 router.put('/:id', async (req, res) => {
   try {
