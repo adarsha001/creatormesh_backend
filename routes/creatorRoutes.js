@@ -81,7 +81,7 @@ router.post('/', async (req, res) => {
     });
   }
 });
-// PUT update creator
+
 router.put('/:id', async (req, res) => {
   try {
     const updatedCreator = await Creator.findOneAndUpdate(
