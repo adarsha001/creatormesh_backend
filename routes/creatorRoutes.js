@@ -40,27 +40,30 @@ router.get('/username/:username', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    // Check if mongoose is connected
-    if (mongoose.connection.readyState !== 1) {
-      return res.status(503).json({ 
-        success: false, 
-        message: 'Database not connected. Please try again in a moment.' 
-      });
-    }
-
-    // Generate creatorId like creator001, creator002, etc.
-    const count = await Creator.countDocuments().maxTimeMS(5000); // 5 second timeout
-    const creatorNumber = String(count + 1).padStart(3, '0');
-    const creatorId = `creator${creatorNumber}`;
+    // Generate timestamp-based unique ID
+    const generateCreatorId = () => {
+      const timestamp = Date.now().toString(36); // Convert timestamp to base36
+      const random = Math.random().toString(36).substring(2, 6); // Random 4 chars
+      return `creator_${timestamp}_${random}`;
+    };
     
+    const creatorId = generateCreatorId();
     console.log(`Creating new creator with ID: ${creatorId}`);
     
     const creatorData = {
       ...req.body,
       creatorId: creatorId,
-      updatedAt: new Date(),
-      createdAt: new Date()
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
+    
+    // Convert numeric fields
+    const numericFields = ['followers', 'avgViews', 'avgLikes', 'avgComments', 'originalPrice', 'companyPrice'];
+    numericFields.forEach(field => {
+      if (creatorData[field]) {
+        creatorData[field] = parseInt(creatorData[field]) || 0;
+      }
+    });
     
     const creator = new Creator(creatorData);
     const savedCreator = await creator.save();
@@ -72,30 +75,12 @@ router.post('/', async (req, res) => {
     });
   } catch (error) {
     console.error('Error in POST /api/creators:', error);
-    
-    // Handle specific MongoDB errors
-    if (error.name === 'MongooseError' && error.message.includes('buffering timed out')) {
-      return res.status(503).json({ 
-        success: false, 
-        message: 'Database connection is still initializing. Please wait a moment and try again.' 
-      });
-    }
-    
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Validation failed', 
-        errors: Object.values(error.errors).map(e => e.message)
-      });
-    }
-    
     res.status(400).json({ 
       success: false, 
       message: error.message 
     });
   }
 });
-
 // PUT update creator
 router.put('/:id', async (req, res) => {
   try {
