@@ -46,11 +46,11 @@ const creatorSchema = new mongoose.Schema({
   phone: String,
   response: String,
   strategicVerdict: String,
-  status: {
-    type: String,
-    enum: ['available', 'busy', 'on_break'],
-    default: 'available'
-  }
+status: {
+  type: String,
+  enum: ['pending', 'approved', 'rejected'],
+  default: 'pending'
+}
 }, {
   timestamps: true // This automatically handles createdAt and updatedAt
 });

@@ -101,6 +101,15 @@ router.post('/', async (req, res) => {
       console.log('Created default socialLinks');
     }
     
+    // Ensure status is valid (default to 'pending' if not provided or invalid)
+    const validStatuses = ['pending', 'approved', 'rejected'];
+    if (!creatorData.status || !validStatuses.includes(creatorData.status)) {
+      creatorData.status = 'pending';
+      console.log(`Status set to default: pending`);
+    } else {
+      console.log(`Status: ${creatorData.status}`);
+    }
+    
     console.log('=== FINAL DATA BEFORE SAVE ===');
     console.log(JSON.stringify(creatorData, null, 2));
     
